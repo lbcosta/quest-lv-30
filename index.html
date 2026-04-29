@@ -179,6 +179,10 @@
             <div id="swap-grid" class="grid grid-cols-4 gap-2 w-64 mx-auto bg-slate-700 p-2 rounded-lg">
                 <!-- Gerado via JS -->
             </div>
+
+            <div class="flex justify-center mt-4">
+                <button onclick="skipSwap()" class="text-xs bg-slate-700 hover:bg-slate-600 p-2 px-4 rounded text-slate-300 transition-colors uppercase font-bold">Desistir / Ver Resposta</button>
+            </div>
         </div>
 
         <!-- TELA FINAL: O CONVITE -->
@@ -677,6 +681,26 @@
                     }, 3200);
                 }, 500);
             }
+        }
+
+        function skipSwap() {
+            swapWon = true;
+            // Preenche o grid visualmente com a resposta
+            currentGrid = [...targetGrid];
+            renderSwapGrid();
+            
+            // Ativa animação dos números
+            const cells = document.querySelectorAll('.swap-cell');
+            const timeChars = ['1', '8', '0', '0'];
+            for (let i = 12; i < 16; i++) {
+                const cell = cells[i];
+                const span = cell.querySelector('span');
+                cell.classList.add('bg-indigo-600', 'border-indigo-400', 'text-white');
+                span.textContent = timeChars[i - 12];
+                span.classList.add('text-yellow-300');
+            }
+
+            showRewardModal("⏰ Horário Revelado:", "<span class='text-xs text-slate-400 mb-2 block'>Respostas: MAGO, ANEL, MANA, SEIS</span>18h00<br><span class='text-xs text-slate-400'>(Chegue cedo para pegar esfirra quente!)</span>");
         }
 
         function copyToClipboard() {
