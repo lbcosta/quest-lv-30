@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quest Nível 30 - Leo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc;
+            touch-action: manipulation;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+            line-height: 1.5;
+        }
+        
+        /* Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.5s; }
+        
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-in { animation: pop 0.3s ease-out forwards; }
+
+        @keyframes flipIn {
+            0% { transform: rotateX(-90deg); opacity: 0; }
+            100% { transform: rotateX(0); opacity: 1; }
+        }
+        .flip-in { animation: flipIn 0.5s ease-out forwards; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+        /* Termo Grid */
+        .termo-cell {
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        
+        /* Hashtag/Swap Grid */
+        .swap-cell {
+            transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
+            user-select: none;
+        }
+        .swap-cell.selected {
+            transform: scale(0.9);
+            box-shadow: inset 0 0 0 3px #fbbf24; /* Amber 400 */
+        }
+        
+        /* Modal Backdrop */
+        .modal-bg { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Container Principal -->
+    <div id="game-container" class="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-slate-700 relative">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 p-4 border-b-2 border-slate-700 flex justify-between items-center text-center">
+            <h1 class="font-pixel text-xs text-yellow-400 w-full">Lvl 30 Quest</h1>
+        </div>
+
+        <!-- TELA 0: Introdução -->
+        <div id="screen-intro" class="p-6 text-center space-y-6">
+            <div class="text-6xl mb-4">🧙‍♂️</div>
+            <h2 class="text-2xl font-bold text-white">Saudações, Viajante!</h2>
+            <p class="text-slate-300">
+                O nosso mestre <strong>Leo</strong> está prestes a atingir o <strong>Nível 30</strong>.
+            </p>
+            <p class="text-slate-300">
+                Para participar desta celebração épica comendo esfirras, você precisa provar que é digno resolvendo 3 enigmas para desbloquear o convite.
+            </p>
+            <button onclick="startGame()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl font-pixel text-[10px] uppercase transition-colors shadow-[0_4px_0_rgb(67,56,202)] active:shadow-[0_0px_0_rgb(67,56,202)] active:translate-y-1">
+                Iniciar Missão [START]
+            </button>
+        </div>
+
+        <!-- TELA 1: CONEXO -->
+        <div id="screen-conexo" class="hidden p-4 space-y-4">
+            <div class="text-center mb-2">
+                <h2 class="font-bold text-lg text-indigo-400">FASE 1: CONEXO</h2>
+                <p class="text-xs text-slate-400">Encontre 4 grupos de 4 palavras.</p>
+            </div>
+            
+            <div id="conexo-solved-area" class="flex flex-col gap-2 mb-2"></div>
+            
+            <div id="conexo-grid" class="grid grid-cols-4 gap-2">
+                <!-- Botões gerados via JS -->
+            </div>
+            
+            <div class="flex justify-between items-center mt-4">
+                <p class="text-xs text-slate-400">Vidas: <span id="conexo-lives" class="text-red-400 font-bold">❤️❤️❤️❤️</span></p>
+                <div class="space-x-2">
+                    <button onclick="checkConexo()" class="text-xs bg-emerald-600 p-2 rounded font-bold text-white">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 2: TERMO -->
+        <div id="screen-termo" class="hidden p-4 flex flex-col h-full">
+            <div class="text-center mb-4">
+                <h2 class="font-bold text-lg text-emerald-400">FASE 2: TERMO</h2>
+                <p class="text-xs text-slate-400">Descubra a palavra de 5 letras.</p>
+            </div>
+            
+            <div id="termo-grid" class="grid grid-rows-6 gap-2 w-3/4 mx-auto mb-6">
+                <!-- Gerado via JS -->
+            </div>
+
+            <!-- Virtual Keyboard -->
+            <div id="keyboard" class="flex flex-col gap-2 mt-auto">
+                <div class="flex justify-center gap-1">
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="Q">Q</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="W">W</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="E">E</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="R">R</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="T">T</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="Y">Y</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="U">U</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="I">I</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="O">O</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="P">P</button>
+                </div>
+                <div class="flex justify-center gap-1">
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="A">A</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="S">S</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="D">D</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="F">F</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="G">G</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="H">H</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="J">J</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="K">K</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="L">L</button>
+                </div>
+                <div class="flex justify-center gap-1">
+                    <button class="key bg-slate-500 rounded p-3 text-xs font-bold w-12" data-key="ENTER">ENTER</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="Z">Z</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="X">X</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="C">C</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="V">V</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="B">B</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="N">N</button>
+                    <button class="key bg-slate-600 rounded p-3 text-sm font-bold" data-key="M">M</button>
+                    <button class="key bg-slate-500 rounded p-3 text-xs font-bold w-12" data-key="BACK">⌫</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 3: TROCA LETRAS -->
+        <div id="screen-hashtag" class="hidden p-4 space-y-4">
+            <div class="text-center mb-4">
+                <h2 class="font-bold text-lg text-amber-400">Fase 3: Troca Letras</h2>
+                <p class="text-xs text-slate-400">Clique em duas letras para trocá-las e forma as 4 palavras corretas na horizontal.</p>
+            </div>
+            
+            <!-- Dicas -->
+            <div class="bg-slate-900 p-3 rounded-lg text-xs space-y-1 text-slate-300 border border-slate-700">
+                <p><span class="text-amber-400 font-bold">1.</span> A melhor classe inicial do Ragnarok</p>
+                <p><span class="text-amber-400 font-bold">2.</span> Um _ _ _ _ para a todos governar</p>
+                <p><span class="text-amber-400 font-bold">3.</span> "Not enough _ _ _ _"</p>
+                <p><span class="text-amber-400 font-bold">4.</span> Número de Pokémon que um treinador pode ter com ele</p>
+            </div>
+
+            <div id="swap-grid" class="grid grid-cols-4 gap-2 w-64 mx-auto bg-slate-700 p-2 rounded-lg">
+                <!-- Gerado via JS -->
+            </div>
+        </div>
+
+        <!-- TELA FINAL: O CONVITE -->
+        <div id="screen-final" class="hidden p-6 text-center">
+            <div class="pop-in space-y-6">
+                <h2 class="font-pixel text-[14px] text-yellow-400 leading-relaxed mb-4">QUEST CONCLUÍDA!</h2>
+                <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=LeoGamer" alt="Avatar Leo" class="w-24 h-24 mx-auto bg-slate-700 rounded-full border-4 border-yellow-400">
+                
+                <div class="bg-slate-900 rounded-xl p-4 border-2 border-slate-600 text-left space-y-4 shadow-inner">
+                    <p class="text-sm text-slate-300 text-center italic">"O boss final foi derrotado. É hora do loot!"</p>
+                    <hr class="border-slate-700">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Onde</p>
+                        <p class="text-md text-emerald-400 font-bold">Pizzaria Recanto</p>
+                        <p class="text-sm text-slate-200">Rua Cel. João Carneiro, 222</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Quando</p>
+                        <p class="text-md text-amber-400 font-bold">Sexta-Feira, 01/05</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Horário</p>
+                        <p class="text-md text-indigo-400 font-bold">18h00</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Missão Principal</p>
+                        <p class="text-sm text-white">Comer esfirra boa e barata e dar boas risadas!</p>
+                    </div>
+                </div>
+
+                <button onclick="copyToClipboard()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl text-sm uppercase transition-colors flex items-center justify-center gap-2">
+                    📋 COPIAR INFO
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modais de Recompensa -->
+    <div id="modal-reward" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 border-2 border-yellow-500 p-6 rounded-xl max-w-sm w-full text-center pop-in shadow-[0_0_20px_rgba(234,179,8,0.3)]">
+            <div class="text-4xl mb-2">🎁</div>
+            <h3 class="font-pixel text-[12px] text-yellow-400 mb-4">ITEM DESBLOQUEADO!</h3>
+            <div id="modal-content" class="bg-slate-900 p-4 rounded text-white font-bold text-lg mb-6 border border-slate-700">
+                <!-- Info Dinâmica -->
+            </div>
+            <button onclick="nextStage()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg w-full text-sm uppercase">
+                Avançar ->
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Termo Falha -->
+    <div id="modal-termo-fail" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 border-2 border-red-500 p-6 rounded-xl max-w-sm w-full text-center pop-in shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+            <div class="text-4xl mb-2">💀</div>
+            <h3 class="font-pixel text-[12px] text-red-400 mb-4">GAME OVER</h3>
+            <p class="text-slate-300 text-sm mb-6">Suas tentativas acabaram!</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="resetTermo()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg w-full text-sm uppercase transition-colors">
+                    🔄 Tentar Novamente
+                </button>
+                <button onclick="skipTermo()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 px-6 rounded-lg w-full text-sm uppercase transition-colors">
+                    ⏭️ Pular e Ver Resposta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg font-bold text-sm opacity-0 transition-opacity pointer-events-none z-50">
+        Mensagem
+    </div>
+
+    <script>
+        // --- UTILIDADES ---
+        function showToast(msg, isError = true) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg font-bold text-sm transition-opacity z-50 ${isError ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        }
+
+        function showRewardModal(title, info) {
+            document.getElementById('modal-content').innerHTML = `
+                <p class="text-xs text-slate-400 font-normal mb-1">${title}</p>
+                <p class="text-green-400 break-words">${info}</p>
+            `;
+            document.getElementById('modal-reward').classList.remove('hidden');
+        }
+
+        // --- CONTROLE DE FLUXO ---
+        let currentStage = 0;
+
+        function startGame() {
+            document.getElementById('screen-intro').classList.add('hidden');
+            document.getElementById('screen-conexo').classList.remove('hidden');
+            initConexo();
+            currentStage = 1;
+        }
+
+        function nextStage() {
+            document.getElementById('modal-reward').classList.add('hidden');
+            if (currentStage === 1) {
+                document.getElementById('screen-conexo').classList.add('hidden');
+                document.getElementById('screen-termo').classList.remove('hidden');
+                initTermo();
+                currentStage = 2;
+            } else if (currentStage === 2) {
+                document.getElementById('screen-termo').classList.add('hidden');
+                document.getElementById('screen-hashtag').classList.remove('hidden');
+                initSwapGrid();
+                currentStage = 3;
+            } else if (currentStage === 3) {
+                document.getElementById('screen-hashtag').classList.add('hidden');
+                document.getElementById('screen-final').classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // FASE 1: CONEXO
+        // ==========================================
+        const conexoData = [
+            { id: 1, name: "SENHOR DOS ANÉIS", words: ["FRODO", "GANDALF", "MORDOR", "CONDADO"], color: "bg-emerald-600" },
+            { id: 2, name: "CONSOLES CLÁSSICOS", words: ["SNES", "ATARI", "NINTENDO", "SEGA"], color: "bg-amber-600" },
+            { id: 3, name: "SABORES DE PIZZA", words: ["CARTOLA", "LOMBO", "FRANGO", "CALABRESA"], color: "bg-blue-600" },
+            { id: 4, name: "LOCAL DA FESTA", words: ["RUA", "CORONEL", "JOÃO", "CARNEIRO"], color: "bg-rose-600" }
+        ];
+        
+        let conexoWords = [];
+        let conexoSelected = [];
+        let conexoSolved = [];
+        let conexoLives = 4;
+        let conexoWon = false;
+
+        function initConexo() {
+            conexoWords = [];
+            conexoWon = false;
+            
+            document.querySelectorAll('#screen-conexo button').forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            });
+
+            conexoData.forEach(group => {
+                group.words.forEach(word => {
+                    conexoWords.push({ word: word, groupId: group.id, selected: false, solved: false });
+                });
+            });
+            shuffleConexoArr(conexoWords);
+            renderConexo();
+        }
+
+        function shuffleConexoArr(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function renderConexo() {
+            const grid = document.getElementById('conexo-grid');
+            grid.innerHTML = '';
+            
+            conexoWords.forEach((item, index) => {
+                if (item.solved) return;
+                const btn = document.createElement('button');
+                btn.textContent = item.word;
+                btn.className = `p-2 text-[10px] font-bold rounded flex items-center justify-center h-12 break-all transition-colors border-2 ${
+                    item.selected ? 'bg-slate-600 border-indigo-400 text-white shadow-inner' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'
+                }`;
+                btn.onclick = () => toggleConexoWord(index);
+                grid.appendChild(btn);
+            });
+        }
+
+        function toggleConexoWord(index) {
+            if (conexoWon) return;
+            const item = conexoWords[index];
+            if (!item.selected && conexoSelected.length >= 4) return;
+            
+            item.selected = !item.selected;
+            if (item.selected) {
+                conexoSelected.push(item);
+            } else {
+                conexoSelected = conexoSelected.filter(w => w.word !== item.word);
+            }
+            renderConexo();
+        }
+
+        function checkConexo() {
+            if (conexoWon) return;
+            if (conexoSelected.length !== 4) {
+                showToast("Selecione 4 palavras!");
+                return;
+            }
+
+            const groupId = conexoSelected[0].groupId;
+            const isCorrect = conexoSelected.every(w => w.groupId === groupId);
+
+            if (isCorrect) {
+                const groupInfo = conexoData.find(g => g.id === groupId);
+                conexoSolved.push(groupId);
+                
+                conexoWords.forEach(w => {
+                    if (w.groupId === groupId) {
+                        w.solved = true;
+                        w.selected = false;
+                    }
+                });
+
+                conexoSelected = [];
+                
+                const solvedArea = document.getElementById('conexo-solved-area');
+                const div = document.createElement('div');
+                div.id = `solved-group-${groupId}`;
+                div.className = `${groupInfo.color} text-white p-2 rounded text-center pop-in transition-all duration-700`;
+                div.innerHTML = `
+                    <p class="text-xs font-bold transition-opacity duration-500" id="title-${groupId}">${groupInfo.name}</p>
+                    <p class="text-[10px] transition-opacity duration-500" id="words-${groupId}">${groupInfo.words.join(', ')}</p>
+                `;
+                solvedArea.appendChild(div);
+
+                if (conexoSolved.length === 4) {
+                    conexoWon = true;
+                    document.querySelectorAll('#screen-conexo button').forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                    });
+
+                    const group4Div = document.getElementById('solved-group-4');
+                    if (group4Div) {
+                        setTimeout(() => {
+                            group4Div.classList.add('scale-105', 'shadow-[0_0_15px_rgba(225,29,72,0.8)]');
+                            const titleEl = document.getElementById('title-4');
+                            const wordsEl = document.getElementById('words-4');
+                            titleEl.style.opacity = '0';
+                            wordsEl.style.opacity = '0';
+
+                            setTimeout(() => {
+                                titleEl.textContent = "📍 ENDEREÇO DESBLOQUEADO!";
+                                titleEl.className = "text-[11px] font-bold text-yellow-300 transition-opacity duration-500";
+                                wordsEl.innerHTML = "Pizzaria Recanto<br>Rua Coronel João Carneiro, 222";
+                                wordsEl.className = "text-[12px] font-bold text-white mt-1 transition-opacity duration-500";
+                                titleEl.style.opacity = '1';
+                                wordsEl.style.opacity = '1';
+                                group4Div.classList.remove('scale-105');
+                            }, 500);
+                        }, 800);
+                    }
+
+                    setTimeout(() => {
+                        showRewardModal("📍 Local Revelado:", "Pizzaria Recanto<br>Rua Coronel João Carneiro, 222");
+                    }, 3200);
+                } else {
+                    renderConexo();
+                }
+            } else {
+                document.getElementById('conexo-grid').classList.add('shake');
+                setTimeout(() => document.getElementById('conexo-grid').classList.remove('shake'), 500);
+                conexoLives--;
+                document.getElementById('conexo-lives').textContent = '❤️'.repeat(conexoLives) + '🖤'.repeat(4 - conexoLives);
+                if (conexoLives === 0) {
+                    showToast("Suas vidas recarregaram! Tente de novo.");
+                    conexoLives = 4;
+                    document.getElementById('conexo-lives').textContent = '❤️❤️❤️❤️';
+                    conexoSelected.forEach(w => w.selected = false);
+                    conexoSelected = [];
+                }
+            }
+        }
+
+        // ==========================================
+        // FASE 2: TERMO
+        // ==========================================
+        const targetWord = "SEXTA";
+        let termoAttempts = [];
+        let currentTermoGuess = "";
+        const maxAttempts = 6;
+        const wordLength = 5;
+        let termoWon = false;
+
+        function initTermo() {
+            termoWon = false;
+            renderTermoGrid();
+            setupTermoKeyboard();
+        }
+
+        function renderTermoGrid() {
+            const grid = document.getElementById('termo-grid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${wordLength}, minmax(0, 1fr))`;
+
+            for (let i = 0; i < maxAttempts; i++) {
+                const rowGuess = termoAttempts[i] || "";
+                const isCurrentRow = i === termoAttempts.length;
+
+                for (let j = 0; j < wordLength; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'termo-cell w-full aspect-square border-2 flex items-center justify-center text-xl font-bold rounded bg-slate-800 text-white';
+                    
+                    if (i < termoAttempts.length) {
+                        cell.textContent = rowGuess[j];
+                        cell.classList.add('flip-in');
+                        cell.style.animationDelay = `${j * 0.1}s`;
+                        
+                        if (rowGuess[j] === targetWord[j]) {
+                            cell.classList.add('bg-emerald-600', 'border-emerald-600');
+                        } else if (targetWord.includes(rowGuess[j])) {
+                            cell.classList.add('bg-amber-500', 'border-amber-500');
+                        } else {
+                            cell.classList.add('bg-slate-700', 'border-slate-700', 'text-slate-400');
+                        }
+                    } else if (isCurrentRow && j < currentTermoGuess.length) {
+                        cell.textContent = currentTermoGuess[j];
+                        cell.classList.add('border-indigo-400', 'pop-in');
+                    } else {
+                        cell.classList.add('border-slate-700');
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function setupTermoKeyboard() {
+            document.querySelectorAll('.key').forEach(btn => {
+                btn.replaceWith(btn.cloneNode(true));
+            });
+            document.querySelectorAll('.key').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    handleKeyPress(e.target.dataset.key);
+                });
+            });
+            document.addEventListener('keydown', (e) => {
+                if (currentStage !== 2) return;
+                const key = e.key.toUpperCase();
+                if (key === 'ENTER') handleKeyPress('ENTER');
+                if (key === 'BACKSPACE') handleKeyPress('BACK');
+                if (/^[A-Z]$/.test(key)) handleKeyPress(key);
+            });
+        }
+
+        function handleKeyPress(key) {
+            if (termoWon || termoAttempts.length >= maxAttempts) return;
+            if (key === 'ENTER') {
+                if (currentTermoGuess.length !== wordLength) {
+                    showToast("Palavra muito curta!");
+                    document.getElementById('termo-grid').classList.add('shake');
+                    setTimeout(() => document.getElementById('termo-grid').classList.remove('shake'), 500);
+                    return;
+                }
+                submitTermoGuess();
+            } else if (key === 'BACK') {
+                currentTermoGuess = currentTermoGuess.slice(0, -1);
+                renderTermoGrid();
+            } else if (currentTermoGuess.length < wordLength) {
+                currentTermoGuess += key;
+                renderTermoGrid();
+            }
+        }
+
+        function submitTermoGuess() {
+            termoAttempts.push(currentTermoGuess);
+            const guess = currentTermoGuess;
+            currentTermoGuess = "";
+            renderTermoGrid();
+            updateKeyboardColors(guess);
+
+            if (guess === targetWord) {
+                termoWon = true;
+                setTimeout(() => {
+                    showRewardModal("📅 Data Revelada:", "Sexta-Feira<br>01 de Maio (01/05)");
+                }, 3200);
+            } else if (termoAttempts.length >= maxAttempts) {
+                setTimeout(() => {
+                    document.getElementById('modal-termo-fail').classList.remove('hidden');
+                }, 1000);
+            }
+        }
+
+        function resetTermo() {
+            termoAttempts = [];
+            currentTermoGuess = "";
+            termoWon = false;
+            renderTermoGrid();
+            document.querySelectorAll('.key').forEach(btn => {
+                if (btn.dataset.key !== 'ENTER' && btn.dataset.key !== 'BACK') {
+                    btn.className = 'key bg-slate-600 rounded p-3 text-sm font-bold';
+                }
+            });
+            document.getElementById('modal-termo-fail').classList.add('hidden');
+        }
+
+        function skipTermo() {
+            document.getElementById('modal-termo-fail').classList.add('hidden');
+            showRewardModal("📅 Data Revelada:", "<span class='text-xs text-slate-400 mb-2 block'>A resposta era \"SEXTA\".</span>Sexta-Feira<br>01 de Maio (01/05)");
+        }
+
+        function updateKeyboardColors(guess) {
+            for (let i = 0; i < guess.length; i++) {
+                const char = guess[i];
+                const btn = document.querySelector(`.key[data-key="${char}"]`);
+                if (!btn) continue;
+                if (char === targetWord[i]) {
+                    btn.classList.remove('bg-slate-600', 'bg-amber-500');
+                    btn.classList.add('bg-emerald-600');
+                } else if (targetWord.includes(char) && !btn.classList.contains('bg-emerald-600')) {
+                    btn.classList.remove('bg-slate-600');
+                    btn.classList.add('bg-amber-500');
+                } else if (!targetWord.includes(char)) {
+                    btn.classList.remove('bg-slate-600');
+                    btn.classList.add('bg-slate-800', 'text-slate-500');
+                }
+            }
+        }
+
+        // ==========================================
+        // FASE 3: TROCA LETRAS
+        // ==========================================
+        const targetGrid = [
+            'M', 'A', 'G', 'O',
+            'A', 'N', 'E', 'L',
+            'M', 'A', 'N', 'A',
+            'S', 'E', 'I', 'S'
+        ];
+        let currentGrid = [];
+        let selectedSwapIndex = null;
+        let swapWon = false;
+
+        function initSwapGrid() {
+            swapWon = false;
+            do {
+                currentGrid = [...targetGrid];
+                shuffleConexoArr(currentGrid);
+            } while (JSON.stringify(currentGrid) === JSON.stringify(targetGrid));
+            renderSwapGrid();
+        }
+
+        function renderSwapGrid() {
+            const container = document.getElementById('swap-grid');
+            container.innerHTML = '';
+            currentGrid.forEach((letter, index) => {
+                const cell = document.createElement('div');
+                cell.className = `swap-cell relative w-full aspect-square flex items-center justify-center text-2xl font-bold rounded shadow-md transition-all duration-300 ${
+                    selectedSwapIndex === index ? 'bg-indigo-500 text-white selected' : 'bg-slate-800 text-slate-200 border border-slate-600'
+                }`;
+                if (letter === targetGrid[index] && selectedSwapIndex !== index && !swapWon) {
+                    cell.classList.remove('bg-slate-800', 'border-slate-600');
+                    cell.classList.add('bg-emerald-900', 'border-emerald-700', 'text-emerald-400');
+                }
+                cell.innerHTML = `<span class="transition-opacity duration-500">${letter}</span>`;
+                cell.onclick = () => handleSwapClick(index);
+                container.appendChild(cell);
+            });
+        }
+
+        function handleSwapClick(index) {
+            if (swapWon) return;
+            if (selectedSwapIndex === null) {
+                selectedSwapIndex = index;
+                renderSwapGrid();
+            } else if (selectedSwapIndex === index) {
+                selectedSwapIndex = null;
+                renderSwapGrid();
+            } else {
+                const temp = currentGrid[selectedSwapIndex];
+                currentGrid[selectedSwapIndex] = currentGrid[index];
+                currentGrid[index] = temp;
+                selectedSwapIndex = null;
+                renderSwapGrid();
+                checkSwapWin();
+            }
+        }
+
+        function checkSwapWin() {
+            if (JSON.stringify(currentGrid) === JSON.stringify(targetGrid)) {
+                swapWon = true;
+                setTimeout(() => {
+                    const cells = document.querySelectorAll('.swap-cell');
+                    const timeChars = ['1', '8', '0', '0'];
+                    for (let i = 12; i < 16; i++) {
+                        const cell = cells[i];
+                        const span = cell.querySelector('span');
+                        cell.classList.remove('bg-emerald-900', 'border-emerald-700', 'text-emerald-400');
+                        cell.classList.add('bg-indigo-600', 'border-indigo-400', 'text-white', 'scale-110', 'shadow-[0_0_15px_rgba(99,102,241,0.8)]', 'z-10');
+                        span.style.opacity = '0';
+                        setTimeout(() => {
+                            span.textContent = timeChars[i - 12];
+                            span.classList.add('text-yellow-300');
+                            span.style.opacity = '1';
+                        }, 500);
+                    }
+                    setTimeout(() => {
+                        showRewardModal("⏰ Horário Revelado:", "18h00<br><span class='text-xs text-slate-400'>(Chegue cedo para pegar esfirra quente!)</span>");
+                    }, 3200);
+                }, 500);
+            }
+        }
+
+        function copyToClipboard() {
+            const textToCopy = `*Aniversário do Leo (Nível 30!)* 🎮🍕\n\n*Onde:* Pizzaria Recanto (Rua Cel. João Carneiro, 222)\n*Quando:* Sexta-Feira, 01/05\n*Horário:* 18h00\n\nTô confirmado!`;
+            try {
+                document.execCommand('copy');
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast("Informações copiadas! Mande para o Leo.", false);
+                }).catch(err => fallbackCopyTextToClipboard(textToCopy));
+            } catch (err) {
+                fallbackCopyTextToClipboard(textToCopy);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Informações copiadas! Mande para o Leo.", false);
+            } catch (err) {
+                showToast("Erro ao copiar. Tire um print!");
+            }
+            document.body.removeChild(textArea);
+        }
+
+    </script>
+</body>
+</html>
